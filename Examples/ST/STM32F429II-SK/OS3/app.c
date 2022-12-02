@@ -83,6 +83,8 @@ static void AppTask_process(void *p_arg);
 
 static void Setup_Gpio(void);
 static void Setup_ADC(void);
+static void  BuzzerOn (void);
+static void  BuzzerOff (void);
 
 /*
 *********************************************************************************************************
@@ -219,7 +221,7 @@ static  void  AppTaskStart (void *p_arg)
 *
 * Returns     : none
 *
-* Note: using pin - A0
+* Note: using pin - PG9(D0)
 *********************************************************************************************************
 */
 static void AppTask_smoke(void *p_arg)
@@ -228,7 +230,8 @@ static void AppTask_smoke(void *p_arg)
 
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
     	//int input = ADC_GetConversionValue(ADC1);
-    	int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
+    	//int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
+    	int input=GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_3);
     	OSQPost((OS_Q *)&AppQ1,
     	   		(void*)&input,
     	   		(OS_MSG_SIZE)sizeof(void *),
@@ -263,7 +266,7 @@ static void AppTask_action(void *p_arg)
    	CPU_TS ts;
 
    	int current = 0;
-
+BuzzerOff();
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
     	p_msg = OSQPend((OS_Q *)&AppQ2,
     					(OS_TICK )0,
@@ -271,7 +274,11 @@ static void AppTask_action(void *p_arg)
 						(OS_MSG_SIZE *)&msg_size,
 						(CPU_TS *)&ts,
 						(OS_ERR *)&err);
-
+    	send_string("\n\rBIIPPPPP\n\r");
+    	OSTimeDlyHMSM(0u, 0u, 5u, 0u,
+    	                      OS_OPT_TIME_HMSM_STRICT,
+    	                      &err);
+    	send_string("\n\rDONE\n\r");
     	BSP_LED_Off(current);
     	current = *(int *)p_msg;
     	BSP_LED_On(current);
@@ -430,6 +437,7 @@ static void Setup_Gpio(void)
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
    RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG, ENABLE); // MQ2 sensor
+   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); // MQ2 sensor
 
    led_init.GPIO_Mode   = GPIO_Mode_OUT;
    led_init.GPIO_OType  = GPIO_OType_PP;
@@ -447,6 +455,27 @@ static void Setup_Gpio(void)
    mq2_init.GPIO_Pin    = GPIO_Pin_9;
 
    GPIO_Init(GPIOG, &mq2_init);
+
+   GPIO_InitTypeDef buzzer_init;
+      buzzer_init.GPIO_Mode   = GPIO_Mode_OUT;
+      buzzer_init.GPIO_OType  = GPIO_OType_PP;
+      buzzer_init.GPIO_Speed  = GPIO_Speed_2MHz;
+      buzzer_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+      buzzer_init.GPIO_Pin    = GPIO_Pin_3;
+
+      GPIO_Init(GPIOA, &buzzer_init);
+      BuzzerOn();
+      GPIO_ResetBits(GPIOA, GPIO_Pin_3);
+}
+
+static void  BuzzerOn (void)
+{
+	//GPIO_SetBits(GPIOG,GPIO_Pin_3);
+	GPIO_WriteBit(GPIOG,GPIO_Pin_3,1);
+}
+
+static void BuzzerOff(void){
+	GPIO_ResetBits(GPIOA, GPIO_Pin_3);
 
 }
 
