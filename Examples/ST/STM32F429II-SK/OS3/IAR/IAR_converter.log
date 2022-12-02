@@ -1,0 +1,9 @@
+Project: IAR
+Converter: IARProjectParser
+Date: 20221119
+
+Project needs GCC compatible startup code and linker script
+Debug: FPU set to default FPU for device: FPv4-SP-D16.
+Debug: FPU set to default FPU for device: FPv4-SP-D16.
+Release: ATTENTION: Failed to determine FPU core for the device: DeviceInfo [vendorName=None, mcuName=default], MCU information uncertain.
+Release: FPU set to none.
