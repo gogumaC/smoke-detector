@@ -219,7 +219,7 @@ static  void  AppTaskStart (void *p_arg)
 *
 * Returns     : none
 *
-* Note: using pin - D15
+* Note: using pin - A0
 *********************************************************************************************************
 */
 static void AppTask_smoke(void *p_arg)
@@ -438,6 +438,7 @@ static void Setup_Gpio(void)
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
    RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
+
    led_init.GPIO_Mode   = GPIO_Mode_OUT;
    led_init.GPIO_OType  = GPIO_OType_PP;
    led_init.GPIO_Speed  = GPIO_Speed_2MHz;
@@ -445,5 +446,13 @@ static void Setup_Gpio(void)
    led_init.GPIO_Pin    = GPIO_Pin_0 | GPIO_Pin_7 | GPIO_Pin_14;
 
    GPIO_Init(GPIOB, &led_init);
+
+   GPIO_InitTypeDef mq2_init;
+   led_init.GPIO_Mode   = GPIO_Mode_OUT;
+   led_init.GPIO_OType  = GPIO_OType_PP;
+   led_init.GPIO_Speed  = GPIO_Speed_2MHz;
+   led_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+   led_init.GPIO_Pin    = GPIO_Pin_0 | GPIO_Pin_7 | GPIO_Pin_14;
+
 }
 
