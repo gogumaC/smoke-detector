@@ -136,7 +136,7 @@ int main(void)
     /* BSP Init */
     BSP_IntDisAll();                                            /* Disable all interrupts.                              */
 
-    CPU_Init();                                                 /* Initialize the uC/CPU Services                       */
+    CPU_Init();                      	                           /* Initialize the uC/CPU Services                       */
     Mem_Init();                                                 /* Initialize Memory Management Module                  */
     Math_Init();                                                /* Initialize Mathematical Module                       */
 
@@ -226,26 +226,16 @@ static void AppTask_smoke(void *p_arg)
 {
     OS_ERR  err;
 
-    int button = 0;
-    int led = 1;
-    OSQPost((OS_Q *)&AppQ1,
-        	   		(void*)&led,
-        	   		(OS_MSG_SIZE)sizeof(void *),
-        	   		(OS_OPT )OS_OPT_POST_FIFO,
-        	   		(OS_ERR *)&err);
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
     	int input = ADC_GetConversionValue(ADC1);
 
-    	button = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13);
-    	if(button == 1){
-    		OSQPost((OS_Q *)&AppQ1,
-    	   			(void*)&input,
-    	   			(OS_MSG_SIZE)sizeof(void *),
-    	   			(OS_OPT )OS_OPT_POST_FIFO,
-    	   			(OS_ERR *)&err);
-    	}
+    	OSQPost((OS_Q *)&AppQ1,
+    	   		(void*)&input,
+    	   		(OS_MSG_SIZE)sizeof(void *),
+    	   		(OS_OPT )OS_OPT_POST_FIFO,
+    	   		(OS_ERR *)&err);
 
-    	OSTimeDlyHMSM(0u, 0u, 0u, 200u,
+    	OSTimeDlyHMSM(0u, 0u, 0u, 500u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
 
@@ -335,7 +325,7 @@ static void AppTask_process(void *p_arg)
     	char text[20];
     	send_string("             ");
     	sprintf(text, "%d", led);
-    	send_string(led);
+    	send_string(text);
     	send_string("\n\r");
 
     	OSQPost((OS_Q *)&AppQ2,
@@ -450,10 +440,10 @@ static void Setup_Gpio(void)
    GPIO_Init(GPIOB, &led_init);
 
    GPIO_InitTypeDef mq2_init;
-   mq2_init.GPIO_Mode   = GPIO_Mode_AN;
+   mq2_init.GPIO_Mode   = GPIO_Mode_AF;
    mq2_init.GPIO_OType  = GPIO_OType_PP;
-   mq2_init.GPIO_Speed  = GPIO_Speed_50MHz;
-   mq2_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+   mq2_init.GPIO_Speed  = GPIO_Speed_2MHz;
+   mq2_init.GPIO_PuPd   = GPIO_PuPd_UP;
    mq2_init.GPIO_Pin    = GPIO_Pin_0;
 
    GPIO_Init(GPIOA, &mq2_init);
@@ -463,14 +453,17 @@ static void Setup_Gpio(void)
 static void Setup_ADC(void) {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 	ADC_InitTypeDef ADC_InitStructure;
+	ADC_DeInit();
 	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-	ADC_InitStructure.ADC_ScanConvMode
-	ADC_InitStructure.ADC_ContinuousConvMode
-	ADC_InitStructure.ADC_ExternalTrigConvEdge
-	ADC_InitStructure.ADC_ExternalTrigConv
-	ADC_InitStructure.ADC_DataAlign
-	ADC_InitStructure.ADC_NbrOfConversion
+	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 1, ADC_SampleTime_56Cycles);
 	ADC_Init(ADC1, &ADC_InitStructure);
 	ADC_Cmd(ADC1, ENABLE);
+	ADC_SoftwareStartConv(ADC1);
+	ADC_ContinuousModeCmd(ADC1, ENABLE);
 }
