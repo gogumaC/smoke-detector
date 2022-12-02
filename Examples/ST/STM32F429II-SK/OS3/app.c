@@ -82,7 +82,7 @@ static void AppTask_action(void *p_arg);
 static void AppTask_process(void *p_arg);
 
 static void Setup_Gpio(void);
-
+static void Setup_ADC(void);
 
 /*
 *********************************************************************************************************
@@ -132,7 +132,7 @@ int main(void)
     RCC_DeInit();
 //    SystemCoreClockUpdate();
     Setup_Gpio();
-
+    Setup_ADC();
     /* BSP Init */
     BSP_IntDisAll();                                            /* Disable all interrupts.                              */
 
@@ -234,11 +234,12 @@ static void AppTask_smoke(void *p_arg)
         	   		(OS_OPT )OS_OPT_POST_FIFO,
         	   		(OS_ERR *)&err);
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
+    	int input = ADC_GetConversionValue(ADC1);
 
     	button = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13);
     	if(button == 1){
     		OSQPost((OS_Q *)&AppQ1,
-    	   			(void*)&led,
+    	   			(void*)&input,
     	   			(OS_MSG_SIZE)sizeof(void *),
     	   			(OS_OPT )OS_OPT_POST_FIFO,
     	   			(OS_ERR *)&err);
@@ -331,10 +332,11 @@ static void AppTask_process(void *p_arg)
     							(OS_ERR *)&err);
 
     	int led = *(int *)p_msg;
-    	send_string("             NOW: LED ");
-    	USART_SendData(Nucleo_COM1, led + '0');
-    	if (led == 3)
-    		send_string("\n\r");
+    	char text[20];
+    	send_string("             ");
+    	sprintf(text, "%d", led);
+    	send_string(led);
+    	send_string("\n\r");
 
     	OSQPost((OS_Q *)&AppQ2,
     	        	   	(void*)&led,
@@ -437,7 +439,7 @@ static void Setup_Gpio(void)
 
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
    RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-
+   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); // MQ2 sensor
 
    led_init.GPIO_Mode   = GPIO_Mode_OUT;
    led_init.GPIO_OType  = GPIO_OType_PP;
@@ -448,11 +450,27 @@ static void Setup_Gpio(void)
    GPIO_Init(GPIOB, &led_init);
 
    GPIO_InitTypeDef mq2_init;
-   led_init.GPIO_Mode   = GPIO_Mode_OUT;
-   led_init.GPIO_OType  = GPIO_OType_PP;
-   led_init.GPIO_Speed  = GPIO_Speed_2MHz;
-   led_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
-   led_init.GPIO_Pin    = GPIO_Pin_0 | GPIO_Pin_7 | GPIO_Pin_14;
+   mq2_init.GPIO_Mode   = GPIO_Mode_AN;
+   mq2_init.GPIO_OType  = GPIO_OType_PP;
+   mq2_init.GPIO_Speed  = GPIO_Speed_50MHz;
+   mq2_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+   mq2_init.GPIO_Pin    = GPIO_Pin_0;
+
+   GPIO_Init(GPIOA, &mq2_init);
 
 }
 
+static void Setup_ADC(void) {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	ADC_InitTypeDef ADC_InitStructure;
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode
+	ADC_InitStructure.ADC_ContinuousConvMode
+	ADC_InitStructure.ADC_ExternalTrigConvEdge
+	ADC_InitStructure.ADC_ExternalTrigConv
+	ADC_InitStructure.ADC_DataAlign
+	ADC_InitStructure.ADC_NbrOfConversion
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 1, ADC_SampleTime_56Cycles);
+	ADC_Init(ADC1, &ADC_InitStructure);
+	ADC_Cmd(ADC1, ENABLE);
+}
