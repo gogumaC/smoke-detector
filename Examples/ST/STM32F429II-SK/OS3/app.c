@@ -132,7 +132,7 @@ int main(void)
     RCC_DeInit();
 //    SystemCoreClockUpdate();
     Setup_Gpio();
-    Setup_ADC();
+    //Setup_ADC();
     /* BSP Init */
     BSP_IntDisAll();                                            /* Disable all interrupts.                              */
 
@@ -227,8 +227,8 @@ static void AppTask_smoke(void *p_arg)
     OS_ERR  err;
 
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
-    	int input = ADC_GetConversionValue(ADC1);
-
+    	//int input = ADC_GetConversionValue(ADC1);
+    	int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
     	OSQPost((OS_Q *)&AppQ1,
     	   		(void*)&input,
     	   		(OS_MSG_SIZE)sizeof(void *),
@@ -429,7 +429,7 @@ static void Setup_Gpio(void)
 
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
    RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); // MQ2 sensor
+   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG, ENABLE); // MQ2 sensor
 
    led_init.GPIO_Mode   = GPIO_Mode_OUT;
    led_init.GPIO_OType  = GPIO_OType_PP;
@@ -440,13 +440,13 @@ static void Setup_Gpio(void)
    GPIO_Init(GPIOB, &led_init);
 
    GPIO_InitTypeDef mq2_init;
-   mq2_init.GPIO_Mode   = GPIO_Mode_AF;
+   mq2_init.GPIO_Mode   = GPIO_Mode_IN;
    mq2_init.GPIO_OType  = GPIO_OType_PP;
    mq2_init.GPIO_Speed  = GPIO_Speed_2MHz;
    mq2_init.GPIO_PuPd   = GPIO_PuPd_UP;
-   mq2_init.GPIO_Pin    = GPIO_Pin_0;
+   mq2_init.GPIO_Pin    = GPIO_Pin_9;
 
-   GPIO_Init(GPIOA, &mq2_init);
+   GPIO_Init(GPIOG, &mq2_init);
 
 }
 
