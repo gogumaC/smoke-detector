@@ -46,12 +46,6 @@
 */
 
 #define  APP_TASK_EQ_0_ITERATION_NBR              16u
-#define  COMMAND_SIZE							  16u
-
-#define	 COMMAND_RESET							  1
-#define	 COMMAND_ON								  2
-#define	 COMMAND_OFF							  3
-#define	 COMMAND_BLINK							  4
 
 /*
 *********************************************************************************************************
@@ -59,9 +53,9 @@
 *********************************************************************************************************
 */
 typedef enum {
-	TASK_input,
-	TASK_output,
-	TASK_USART,
+	TASK_smoke,
+	TASK_action,
+	TASK_process,
 
 	TASK_N
 }task_e;
@@ -83,14 +77,9 @@ static  void  AppTaskStart          (void     *p_arg);
 static  void  AppTaskCreate         (void);
 static  void  AppObjCreate          (void);
 
-static void AppTask_input(void *p_arg);
-static void AppTask_output(void *p_arg);
-static void AppTask_USART(void *p_arg);
-
-void ledCommand(int myLED);
-
-void execCmd(char *command, int length);
-int interpretCmd(char *command, int length);
+static void AppTask_smoke(void *p_arg);
+static void AppTask_action(void *p_arg);
+static void AppTask_process(void *p_arg);
 
 static void Setup_Gpio(void);
 
@@ -104,30 +93,23 @@ static void Setup_Gpio(void);
 static  OS_TCB   AppTaskStartTCB;
 static  CPU_STK  AppTaskStartStk[APP_CFG_TASK_START_STK_SIZE];
 
-static	OS_TCB		 Task_input_TCB;
-static	OS_TCB		 Task_output_TCB;
-static  OS_TCB       Task_USART_TCB;
+static	OS_TCB		 Task_smoke_TCB;
+static	OS_TCB		 Task_led_TCB;
+static  OS_TCB       Task_process_TCB;
 
 static OS_Q AppQ1;
 static OS_Q AppQ2;
 
-static  CPU_STK  Task_input_Stack[APP_CFG_TASK_START_STK_SIZE];
-static  CPU_STK  Task_output_Stack[APP_CFG_TASK_START_STK_SIZE];
-static  CPU_STK  Task_USART_Stack[APP_CFG_TASK_START_STK_SIZE];
+static  CPU_STK  Task_smoke_Stack[APP_CFG_TASK_START_STK_SIZE];
+static  CPU_STK  Task_action_Stack[APP_CFG_TASK_START_STK_SIZE];
+static  CPU_STK  Task_process_Stack[APP_CFG_TASK_START_STK_SIZE];
 
 task_t cyclic_tasks[TASK_N] = {
-	{"Task_input", AppTask_input,   0, &Task_input_Stack[0],  &Task_input_TCB},
-	{"Task_output", AppTask_output,	1, &Task_output_Stack[0],  &Task_output_TCB},
-	{"Task_USART", AppTask_USART,   2, &Task_USART_Stack[0],  &Task_USART_TCB},
+	{"Task_smoke", AppTask_smoke,   0, &Task_smoke_Stack[0],  &Task_smoke_TCB},
+	{"Task_action", AppTask_action,	1, &Task_action_Stack[0],  &Task_led_TCB},
+	{"Task_process", AppTask_process,   2, &Task_process_Stack[0],  &Task_process_TCB},
 };
 
-int blinkCommandFlag = 0;
-int onFlag = 0;
-int offFlag = 0;
-int blinkFlag = 0;
-int resetFlag = 0;
-int blinkTime = 0;
-int selectLED = 0;
 /* ------------ FLOATING POINT TEST TASK -------------- */
 /*
 *********************************************************************************************************
@@ -229,18 +211,18 @@ static  void  AppTaskStart (void *p_arg)
 
 /*
 *********************************************************************************************************
-*                                          AppTask_input
+*                                          AppTask_smoke
 *
-* Description : BUTTON SCAN
+* Description : catch smoke by MQ2 sensor
 *
 * Arguments   : p_arg (unused)
 *
 * Returns     : none
 *
-* Note: *
+* Note: using pin - D15
 *********************************************************************************************************
 */
-static void AppTask_input(void *p_arg)
+static void AppTask_smoke(void *p_arg)
 {
     OS_ERR  err;
 
@@ -271,18 +253,18 @@ static void AppTask_input(void *p_arg)
 
 /*
 *********************************************************************************************************
-*                                          AppTask_output
+*                                          AppTask_action
 *
-* Description : LED ROLLING
+* Description : BUZZER ON, and LED blinking
 *
 * Arguments   : p_arg (unused)
 *
 * Returns     : none
 *
-* Note: *
+* Note: using pin - ??
 *********************************************************************************************************
 */
-static void AppTask_output(void *p_arg)
+static void AppTask_action(void *p_arg)
 {
     OS_ERR  err;
     void *p_msg;
@@ -307,9 +289,9 @@ static void AppTask_output(void *p_arg)
 
 /*
 *********************************************************************************************************
-*                                          AppTask_USART
+*                                          AppTask_process
 *
-* Description : USAT CONTROL
+* Description : DATA process & signal to task
 *
 * Arguments   : p_arg (unused)
 *
@@ -318,7 +300,7 @@ static void AppTask_output(void *p_arg)
 * Note: none
 *********************************************************************************************************
 */
-static void AppTask_USART(void *p_arg)
+static void AppTask_process(void *p_arg)
 {
 	OS_ERR  err;
 	void *p_msg;
