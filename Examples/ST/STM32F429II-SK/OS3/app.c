@@ -49,7 +49,7 @@
 
 #define	sensingMs							500u
 #define	detectSecond						5u
-#define	detectCountLimit					(int)detectSecond / (sensingMs / 1000.0)
+#define	detectCountLimit					(uint16_t)detectSecond / (sensingMs / 1000.0)
 
 /*
 *********************************************************************************************************
@@ -86,9 +86,9 @@ static void AppTask_action(void *p_arg);
 static void AppTask_process(void *p_arg);
 
 static void Setup_Gpio(void);
-static void Setup_ADC(void);
-static void  BuzzerOn (void);
-static void  BuzzerOff (void);
+static uint8_t ReadMQ2 (void);
+static void BuzzerOn (void);
+static void BuzzerOff (void);
 
 /*
 *********************************************************************************************************
@@ -136,9 +136,8 @@ int main(void)
 
     /* Basic Init */
     RCC_DeInit();
-//    SystemCoreClockUpdate();
+    // SystemCoreClockUpdate();
     Setup_Gpio();
-    //Setup_ADC();
     /* BSP Init */
     BSP_IntDisAll();                                            /* Disable all interrupts.                              */
 
@@ -147,9 +146,9 @@ int main(void)
     Math_Init();                                                /* Initialize Mathematical Module                       */
 
     OSQCreate ((OS_Q *)&AppQ1, (CPU_CHAR *)"My App Queue1",
-    			(OS_MSG_QTY )10, (OS_ERR *)&err);
+    		   (OS_MSG_QTY )10, (OS_ERR *)&err);
     OSQCreate ((OS_Q *)&AppQ2, (CPU_CHAR *)"My App Queue2",
-        			(OS_MSG_QTY )10, (OS_ERR *)&err);
+        	   (OS_MSG_QTY )10, (OS_ERR *)&err);
 
     /* OS Init */
     OSInit(&err);                                               /* Init uC/OS-III.                                      */
@@ -233,9 +232,7 @@ static void AppTask_smoke(void *p_arg)
     OS_ERR  err;
 
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
-    	//int input = ADC_GetConversionValue(ADC1);
-    	int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
-    	//int input=GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_3);
+    	uint8_t input = ReadMQ2();
     	OSQPost((OS_Q *)&AppQ1,
     	   		(void*)&input,
     	   		(OS_MSG_SIZE)sizeof(void *),
@@ -269,8 +266,6 @@ static void AppTask_action(void *p_arg)
    	OS_MSG_SIZE msg_size;
    	CPU_TS ts;
 
-   	int current = 0;
-BuzzerOff();
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
     	p_msg = OSQPend((OS_Q *)&AppQ2,
     					(OS_TICK )0,
@@ -279,13 +274,12 @@ BuzzerOff();
 						(CPU_TS *)&ts,
 						(OS_ERR *)&err);
     	send_string("\n\rBIIPPPPP\n\r");
+    	BuzzerOn();
     	OSTimeDlyHMSM(0u, 0u, 5u, 0u,
     	                      OS_OPT_TIME_HMSM_STRICT,
     	                      &err);
+    	BuzzerOff();
     	send_string("\n\rDONE\n\r");
-    	BSP_LED_Off(current);
-    	current = *(int *)p_msg;
-    	BSP_LED_On(current);
     }
 }
 
@@ -299,7 +293,7 @@ BuzzerOff();
 *
 * Returns     : none
 *
-* Note: none
+* Note: get sensing and action signal
 *********************************************************************************************************
 */
 static void AppTask_process(void *p_arg)
@@ -318,9 +312,9 @@ static void AppTask_process(void *p_arg)
 	send_string("#       #    # ######  ####   ####     ######   ####    #     #    ####  #    # \n\r");
 	send_string("\n\r");
 	send_string("\n\r");
-	int cnt = 0;
-	int negativeCnt = 0;
-	int detect = 0;
+	uint16_t cnt = 0;
+	uint16_t negativeCnt = 0;
+	uint8_t detect = 0;
     while (DEF_TRUE) {
 
     	p_msg = OSQPend((OS_Q *)&AppQ1,
@@ -330,18 +324,26 @@ static void AppTask_process(void *p_arg)
     					(CPU_TS *)&ts,
     					(OS_ERR *)&err);
 
-    	int sensing = !(*(int *)p_msg);
+    	uint8_t sensing = !(*(uint8_t *)p_msg);
 
-    	if (!detect) {
-    		if (sensing) cnt++;
-    		else cnt = 0;
+    	// USART sensing 모니터링
+    	if (sensing) {
+    		send_string("smoking\n\r");
     	}
     	else {
-    		if (!sensing) negativeCnt++;
+    	    send_string("not smoking\n\r");
+    	}
+
+    	if (!detect) {							// 감지 신호 보내기 전
+    		if (sensing) cnt++;					// 연속된 count 값 갱신
+    		else cnt = 0;
+    	}
+    	else {									// 감지 신호 보낸 후
+    		if (!sensing) negativeCnt++;		// 연속된 nCount 값 갱신
     		else negativeCnt = 0;
     	}
 
-    	if (cnt == detectCountLimit) {
+    	if (cnt == detectCountLimit) {			// count 가 Limit 도달 시 messageQueue 전송
     		detect = 1;
     		cnt = 0;
     		OSQPost((OS_Q *)&AppQ2,
@@ -350,16 +352,9 @@ static void AppTask_process(void *p_arg)
     		    	(OS_OPT )OS_OPT_POST_FIFO,
     		    	(OS_ERR *)&err);
     	}
-    	if (negativeCnt == detectCountLimit) {
+    	if (negativeCnt == detectCountLimit) {	// nCount가 Limit 도달 시 재 감지 대기
     		detect = 0;
     		negativeCnt = 0;
-    	}
-
-    	if (sensing) {
-    		send_string("smoking\n\r");
-    	}
-    	else {
-    		send_string("not smoking\n\r");
     	}
     }
 }
@@ -455,8 +450,7 @@ static void Setup_Gpio(void)
 
    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
    RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG, ENABLE); // MQ2 sensor
-   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); // MQ2 sensor
+   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG, ENABLE); // MQ2 sensor & Buzzer
 
    led_init.GPIO_Mode   = GPIO_Mode_OUT;
    led_init.GPIO_OType  = GPIO_OType_PP;
@@ -473,45 +467,32 @@ static void Setup_Gpio(void)
    mq2_init.GPIO_PuPd   = GPIO_PuPd_UP;
    mq2_init.GPIO_Pin    = GPIO_Pin_9;
 
-   GPIO_Init(GPIOG, &mq2_init);
+   GPIO_Init(GPIOG, &mq2_init);}
 
-   GPIO_InitTypeDef buzzer_init;
-      buzzer_init.GPIO_Mode   = GPIO_Mode_OUT;
-      buzzer_init.GPIO_OType  = GPIO_OType_PP;
-      buzzer_init.GPIO_Speed  = GPIO_Speed_2MHz;
-      buzzer_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
-      buzzer_init.GPIO_Pin    = GPIO_Pin_3;
-
-      GPIO_Init(GPIOA, &buzzer_init);
-      BuzzerOn();
-      GPIO_ResetBits(GPIOA, GPIO_Pin_3);
+static uint8_t ReadMQ2 (void)
+{
+	return GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
 }
 
 static void  BuzzerOn (void)
 {
-	//GPIO_SetBits(GPIOG,GPIO_Pin_3);
-	GPIO_WriteBit(GPIOG,GPIO_Pin_3,1);
+	GPIO_InitTypeDef buzzer_init;
+	buzzer_init.GPIO_Mode   = GPIO_Mode_OUT;
+	buzzer_init.GPIO_OType  = GPIO_OType_PP;
+	buzzer_init.GPIO_Speed  = GPIO_Speed_2MHz;
+	buzzer_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+	buzzer_init.GPIO_Pin    = GPIO_Pin_3;
+
+	GPIO_Init(GPIOG, &buzzer_init);
 }
 
 static void BuzzerOff(void){
-	GPIO_ResetBits(GPIOA, GPIO_Pin_3);
+	GPIO_InitTypeDef buzzer_init;
+	buzzer_init.GPIO_Mode   = GPIO_Mode_IN;
+	buzzer_init.GPIO_OType  = GPIO_OType_PP;
+	buzzer_init.GPIO_Speed  = GPIO_Speed_2MHz;
+	buzzer_init.GPIO_PuPd   = GPIO_PuPd_NOPULL;
+	buzzer_init.GPIO_Pin    = GPIO_Pin_3;
 
-}
-
-static void Setup_ADC(void) {
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-	ADC_InitTypeDef ADC_InitStructure;
-	ADC_DeInit();
-	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
-	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = 1;
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 1, ADC_SampleTime_56Cycles);
-	ADC_Init(ADC1, &ADC_InitStructure);
-	ADC_Cmd(ADC1, ENABLE);
-	ADC_SoftwareStartConv(ADC1);
-	ADC_ContinuousModeCmd(ADC1, ENABLE);
+	GPIO_Init(GPIOG, &buzzer_init);
 }
