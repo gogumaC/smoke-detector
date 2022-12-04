@@ -273,7 +273,7 @@ static void AppTask_action(void *p_arg)
 						(OS_MSG_SIZE *)&msg_size,
 						(CPU_TS *)&ts,
 						(OS_ERR *)&err);
-    	send_string("\n\rBIIPPPPP\n\r");
+    	send_string("\n\r--------------------------BIIPPPPPPPPP!!!---------------------------\n\r");
     	BuzzerOn();
     	OSTimeDlyHMSM(0u, 0u, 5u, 0u,
     	                      OS_OPT_TIME_HMSM_STRICT,
