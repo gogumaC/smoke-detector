@@ -45,7 +45,11 @@
 *********************************************************************************************************
 */
 
-#define  APP_TASK_EQ_0_ITERATION_NBR              16u
+#define APP_TASK_EQ_0_ITERATION_NBR			16u
+
+#define	sensingMs							500u
+#define	detectSecond						5u
+#define	detectCountLimit					(int)detectSecond / (sensingMs / 1000.0)
 
 /*
 *********************************************************************************************************
@@ -230,15 +234,15 @@ static void AppTask_smoke(void *p_arg)
 
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
     	//int input = ADC_GetConversionValue(ADC1);
-    	//int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
-    	int input=GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_3);
+    	int input=GPIO_ReadInputDataBit(GPIOG,GPIO_Pin_9);
+    	//int input=GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_3);
     	OSQPost((OS_Q *)&AppQ1,
     	   		(void*)&input,
     	   		(OS_MSG_SIZE)sizeof(void *),
     	   		(OS_OPT )OS_OPT_POST_FIFO,
     	   		(OS_ERR *)&err);
 
-    	OSTimeDlyHMSM(0u, 0u, 0u, 500u,
+    	OSTimeDlyHMSM(0u, 0u, 0u, sensingMs,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
 
@@ -314,34 +318,49 @@ static void AppTask_process(void *p_arg)
 	send_string("#       #    # ######  ####   ####     ######   ####    #     #    ####  #    # \n\r");
 	send_string("\n\r");
 	send_string("\n\r");
-
-	send_string("                         LED 1 -> LED 2 -> LED 3 -> LED1\n\r");
-	send_string("                                      ROLLING           \n\r");
-	send_string("\n\r");
-
+	int cnt = 0;
+	int negativeCnt = 0;
+	int detect = 0;
     while (DEF_TRUE) {
 
     	p_msg = OSQPend((OS_Q *)&AppQ1,
-    	    					(OS_TICK )0,
-    							(OS_OPT )OS_OPT_PEND_BLOCKING,
-    							(OS_MSG_SIZE *)&msg_size,
-    							(CPU_TS *)&ts,
-    							(OS_ERR *)&err);
+    	    			(OS_TICK )0,
+    					(OS_OPT )OS_OPT_PEND_BLOCKING,
+    					(OS_MSG_SIZE *)&msg_size,
+    					(CPU_TS *)&ts,
+    					(OS_ERR *)&err);
 
-    	int led = *(int *)p_msg;
-    	char text[20];
-    	send_string("             ");
-    	sprintf(text, "%d", led);
-    	send_string(text);
-    	send_string("\n\r");
+    	int sensing = !(*(int *)p_msg);
 
-    	OSQPost((OS_Q *)&AppQ2,
-    	        	   	(void*)&led,
-    	        	   	(OS_MSG_SIZE)sizeof(void *),
-    	        	   	(OS_OPT )OS_OPT_POST_FIFO,
-    	        	   	(OS_ERR *)&err);
-    	led = led % 3 + 1;
-    	*(int *)p_msg = led;
+    	if (!detect) {
+    		if (sensing) cnt++;
+    		else cnt = 0;
+    	}
+    	else {
+    		if (!sensing) negativeCnt++;
+    		else negativeCnt = 0;
+    	}
+
+    	if (cnt == detectCountLimit) {
+    		detect = 1;
+    		cnt = 0;
+    		OSQPost((OS_Q *)&AppQ2,
+    		    	(void*)&detect,
+    		    	(OS_MSG_SIZE)sizeof(void *),
+    		    	(OS_OPT )OS_OPT_POST_FIFO,
+    		    	(OS_ERR *)&err);
+    	}
+    	if (negativeCnt == detectCountLimit) {
+    		detect = 0;
+    		negativeCnt = 0;
+    	}
+
+    	if (sensing) {
+    		send_string("smoking\n\r");
+    	}
+    	else {
+    		send_string("not smoking\n\r");
+    	}
     }
 }
 
