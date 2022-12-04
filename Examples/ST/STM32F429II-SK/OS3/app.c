@@ -49,7 +49,7 @@
 
 #define	sensingMs							500u
 #define	detectSecond						5u
-#define	detectCountLimit					(uint16_t)detectSecond / (sensingMs / 1000.0)
+#define	detectCountLimit					(uint16_t)(detectSecond / (sensingMs / 1000.0))
 
 /*
 *********************************************************************************************************
@@ -279,7 +279,6 @@ static void AppTask_action(void *p_arg)
     	                      OS_OPT_TIME_HMSM_STRICT,
     	                      &err);
     	BuzzerOff();
-    	send_string("\n\rDONE\n\r");
     }
 }
 
@@ -303,15 +302,35 @@ static void AppTask_process(void *p_arg)
 	OS_MSG_SIZE msg_size;
 	CPU_TS ts;
 
-	send_string("######                                 ######                                   \n\r");
-	send_string("#     # #####  ######  ####   ####     #     # #    # ##### #####  ####  #    # \n\r");
-	send_string("#     # #    # #      #      #         #     # #    #   #     #   #    # ##   # \n\r");
-	send_string("######  #    # #####   ####   ####     ######  #    #   #     #   #    # # #  # \n\r");
-	send_string("#       #####  #           #      #    #     # #    #   #     #   #    # #  # # \n\r");
-	send_string("#       #   #  #      #    # #    #    #     # #    #   #     #   #    # #   ## \n\r");
-	send_string("#       #    # ######  ####   ####     ######   ####    #     #    ####  #    # \n\r");
+	send_string("\n\r");
+	send_string("            #####  #     # ####### #    # ####### \n\r");
+	send_string("           #       ##   ## #     # #   #  #       \n\r");
+	send_string("           #       # # # # #     # #  #   #       \n\r");
+	send_string("            #####  #  #  # #     # ###    #####   \n\r");
+	send_string("                 # #     # #     # #  #   #       \n\r");
+	send_string("                 # #     # #     # #   #  #       \n\r");
+	send_string("           ######  #     # ####### #    # ####### \n\r");
 	send_string("\n\r");
 	send_string("\n\r");
+	send_string(" ######  ####### ####### #######  #####  ####### ####### ######  \n\r");
+	send_string(" #     # #          #    #       #     #    #    #       #     # \n\r");
+	send_string(" #     # #          #    #       #          #    #       #     # \n\r");
+	send_string(" #     # #####      #    #####   #          #    #####   ######  \n\r");
+	send_string(" #     # #          #    #       #          #    #       #   #   \n\r");
+	send_string(" #     # #          #    #       #     #    #    #       #    #  \n\r");
+	send_string(" ######  #######    #    #######  #####     #    ####### #     # \n\r");
+	send_string("\n\r");
+	send_string("\n\r");
+
+	char guide[30];
+
+	sprintf(guide, "     * If smoke is detected for %d seconds, BIIPPPPPPPPP!!! * \n\r", detectSecond);
+	send_string(guide);
+	send_string("\n\r");
+	send_string("\n\r");
+
+	char limitText[5];
+	sprintf(limitText, "%d", detectCountLimit);
 	uint16_t cnt = 0;
 	uint16_t negativeCnt = 0;
 	uint8_t detect = 0;
@@ -326,14 +345,6 @@ static void AppTask_process(void *p_arg)
 
     	uint8_t sensing = !(*(uint8_t *)p_msg);
 
-    	// USART sensing 모니터링
-    	if (sensing) {
-    		send_string("smoking\n\r");
-    	}
-    	else {
-    	    send_string("not smoking\n\r");
-    	}
-
     	if (!detect) {							// 감지 신호 보내기 전
     		if (sensing) cnt++;					// 연속된 count 값 갱신
     		else cnt = 0;
@@ -342,6 +353,23 @@ static void AppTask_process(void *p_arg)
     		if (!sensing) negativeCnt++;		// 연속된 nCount 값 갱신
     		else negativeCnt = 0;
     	}
+
+    	// USART sensing 모니터링
+    	send_string("\r                                    ");
+    	send_string("\rNow state: ");
+
+    	if (sensing) {
+    		send_string("smoking");
+    		char state[10];
+    		sprintf(state, " (%d/%d)", cnt, detectCountLimit);
+    		send_string(state);
+    	}
+    	else {
+    	    send_string("not smoking");
+    	    char state[10];
+    	    sprintf(state, " (%d/%d)", negativeCnt, detectCountLimit);
+    	    send_string(state);
+    	} // USART sensing 모니터링 끝
 
     	if (cnt == detectCountLimit) {			// count 가 Limit 도달 시 messageQueue 전송
     		detect = 1;
