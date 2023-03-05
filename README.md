@@ -21,4 +21,4 @@ smoke-detector\Examples\ST\STM32F429II-SK\OS3\TrueSTUDIO\.project 실행
 Watch it through the [Youtube Link](https://www.youtube.com/watch?v=fxReEu6GE9A)!
 
 ## Colaborators
- [안혜준](https://github.com/hyejunn), [김유빈](https://github.com/gogumaC)
+ [안혜준](https://github.com/jagaldol), [김유빈](https://github.com/gogumaC)
