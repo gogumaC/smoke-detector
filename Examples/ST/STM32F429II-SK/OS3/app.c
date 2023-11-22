@@ -313,11 +313,11 @@ static void AppTask_process(void *p_arg)
 	send_string("\n\r");
 	send_string("\n\r");
 	send_string(" ######  ####### ####### #######  #####  ####### ####### ######  \n\r");
-	send_string(" #     # #          #    #       #     #    #    #       #     # \n\r");
-	send_string(" #     # #          #    #       #          #    #       #     # \n\r");
-	send_string(" #     # #####      #    #####   #          #    #####   ######  \n\r");
-	send_string(" #     # #          #    #       #          #    #       #   #   \n\r");
-	send_string(" #     # #          #    #       #     #    #    #       #    #  \n\r");
+	send_string(" #     # #          #    #       #     #    #    #     # #     # \n\r");
+	send_string(" #     # #          #    #       #          #    #     # #     # \n\r");
+	send_string(" #     # #####      #    #####   #          #    #     # ######  \n\r");
+	send_string(" #     # #          #    #       #          #    #     # #   #   \n\r");
+	send_string(" #     # #          #    #       #     #    #    #     # #    #  \n\r");
 	send_string(" ######  #######    #    #######  #####     #    ####### #     # \n\r");
 	send_string("\n\r");
 	send_string("\n\r");
@@ -345,16 +345,16 @@ static void AppTask_process(void *p_arg)
 
     	uint8_t sensing = !(*(uint8_t *)p_msg);
 
-    	if (!detect) {							// °¨Áö ½ÅÈ£ º¸³»±â Àü
-    		if (sensing) cnt++;					// ¿¬¼ÓµÈ count °ª °»½Å
+    	if (!detect) {							// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È£ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
+    		if (sensing) cnt++;					// ï¿½ï¿½ï¿½Óµï¿½ count ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     		else cnt = 0;
     	}
-    	else {									// °¨Áö ½ÅÈ£ º¸³½ ÈÄ
-    		if (!sensing) negativeCnt++;		// ¿¬¼ÓµÈ nCount °ª °»½Å
+    	else {									// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È£ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
+    		if (!sensing) negativeCnt++;		// ï¿½ï¿½ï¿½Óµï¿½ nCount ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     		else negativeCnt = 0;
     	}
 
-    	// USART sensing ¸ð´ÏÅÍ¸µ
+    	// USART sensing ï¿½ï¿½ï¿½ï¿½Í¸ï¿½
     	send_string("\r                                    ");
     	send_string("\rNow state: ");
 
@@ -369,9 +369,9 @@ static void AppTask_process(void *p_arg)
     	    char state[10];
     	    sprintf(state, " (%d/%d)", negativeCnt, detectCountLimit);
     	    send_string(state);
-    	} // USART sensing ¸ð´ÏÅÍ¸µ ³¡
+    	} // USART sensing ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½
 
-    	if (cnt == detectCountLimit) {			// count °¡ Limit µµ´Þ ½Ã messageQueue Àü¼Û
+    	if (cnt == detectCountLimit) {			// count ï¿½ï¿½ Limit ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ messageQueue ï¿½ï¿½ï¿½ï¿½
     		detect = 1;
     		cnt = 0;
     		OSQPost((OS_Q *)&AppQ2,
@@ -380,7 +380,7 @@ static void AppTask_process(void *p_arg)
     		    	(OS_OPT )OS_OPT_POST_FIFO,
     		    	(OS_ERR *)&err);
     	}
-    	if (negativeCnt == detectCountLimit) {	// nCount°¡ Limit µµ´Þ ½Ã Àç °¨Áö ´ë±â
+    	if (negativeCnt == detectCountLimit) {	// nCountï¿½ï¿½ Limit ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
     		detect = 0;
     		negativeCnt = 0;
     	}
